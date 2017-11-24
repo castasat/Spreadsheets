@@ -6,19 +6,15 @@ import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
-
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.ExponentialBackOff;
-
 import com.google.api.services.sheets.v4.SheetsScopes;
-
-import com.google.api.services.sheets.v4.model.*;
-
+import com.google.api.services.sheets.v4.model.ValueRange;
 import android.Manifest;
 import android.accounts.AccountManager;
-import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -29,6 +25,7 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
@@ -36,53 +33,40 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
+import pub.devrel.easypermissions.AfterPermissionGranted;
+import pub.devrel.easypermissions.EasyPermissions.PermissionCallbacks;
 
-public class MainActivity extends Activity implements EasyPermissions.PermissionCallbacks
+public class MainActivity extends AppCompatActivity implements PermissionCallbacks
 {
-  GoogleAccountCredential mCredential;
-  private TextView mOutputText;
-  private Button   mCallApiButton;
-  ProgressDialog mProgress;
+  private GoogleAccountCredential mCredential;
+  private TextView                mOutputText;
+  private Button                  mCallApiButton;
+  private ProgressDialog          mProgress;
   
-  static final int REQUEST_ACCOUNT_PICKER          = 1000;
-  static final int REQUEST_AUTHORIZATION           = 1001;
-  static final int REQUEST_GOOGLE_PLAY_SERVICES    = 1002;
-  static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
+  private static final int REQUEST_ACCOUNT_PICKER          = 1000;
+  private static final int REQUEST_AUTHORIZATION           = 1001;
+  private static final int REQUEST_GOOGLE_PLAY_SERVICES    = 1002;
+  private static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
   
-  private static final String   BUTTON_TEXT       = "Call Google Sheets API";
   private static final String   PREF_ACCOUNT_NAME = "accountName";
   private static final String[] SCOPES            = {SheetsScopes.SPREADSHEETS_READONLY};
   
-  /**
-   * Create the main activity.
-   *
-   * @param savedInstanceState
-   *     previously saved instance data.
-   */
-  @Override protected void onCreate(Bundle savedInstanceState)
+  @Override
+  public void onCreate(Bundle savedInstanceState)
   {
     super.onCreate(savedInstanceState);
-    LinearLayout activityLayout = new LinearLayout(this);
-    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
-    activityLayout.setLayoutParams(lp);
-    activityLayout.setOrientation(LinearLayout.VERTICAL);
-    activityLayout.setPadding(16, 16, 16, 16);
-    
-    ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    
-    mCallApiButton = new Button(this);
-    mCallApiButton.setText(BUTTON_TEXT);
+    setContentView(R.layout.main_layout);
+
+    mCallApiButton = findViewById(R.id.mCallApiButton);
     mCallApiButton.setOnClickListener(new View.OnClickListener()
     {
-      @Override public void onClick(View v)
+      @Override
+      public void onClick(View v)
       {
         mCallApiButton.setEnabled(false);
         mOutputText.setText("");
@@ -90,20 +74,12 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         mCallApiButton.setEnabled(true);
       }
     });
-    activityLayout.addView(mCallApiButton);
     
-    mOutputText = new TextView(this);
-    mOutputText.setLayoutParams(tlp);
-    mOutputText.setPadding(16, 16, 16, 16);
-    mOutputText.setVerticalScrollBarEnabled(true);
+    mOutputText = findViewById(R.id.mOutputText);
     mOutputText.setMovementMethod(new ScrollingMovementMethod());
-    mOutputText.setText("Click the \'" + BUTTON_TEXT + "\' button to test the API.");
-    activityLayout.addView(mOutputText);
     
     mProgress = new ProgressDialog(this);
-    mProgress.setMessage("Calling Google Sheets API ...");
-    
-    setContentView(activityLayout);
+    mProgress.setMessage(getString(R.string.calling_spreadsheets));
     
     // Initialize credentials and service object.
     mCredential = GoogleAccountCredential.usingOAuth2(getApplicationContext(), Arrays.asList(SCOPES)).setBackOff(new ExponentialBackOff());
@@ -147,7 +123,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
    * function will be rerun automatically whenever the GET_ACCOUNTS permission
    * is granted.
    */
-  @AfterPermissionGranted (REQUEST_PERMISSION_GET_ACCOUNTS) private void chooseAccount()
+  @AfterPermissionGranted (REQUEST_PERMISSION_GET_ACCOUNTS)
+  private void chooseAccount()
   {
     if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS))
     {
@@ -166,7 +143,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
     else
     {
       // Request the GET_ACCOUNTS permission via a user dialog
-      EasyPermissions.requestPermissions(this, "This app needs to access your Google account (via Contacts).", REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
+      EasyPermissions.requestPermissions(this, "This app needs to access your Google account (via Contacts).",
+          REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
     }
   }
   
@@ -184,7 +162,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
    *     Intent (containing result data) returned by incoming
    *     activity result.
    */
-  @Override protected void onActivityResult(int requestCode, int resultCode, Intent data)
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data)
   {
     super.onActivityResult(requestCode, resultCode, data);
     switch (requestCode)
@@ -235,8 +214,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
    *     The grant results for the corresponding permissions
    *     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
    */
-  @Override public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
-  
+  @Override
+  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
   {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
@@ -252,7 +231,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
    * @param list
    *     The requested permission list. Never null.
    */
-  @Override public void onPermissionsGranted(int requestCode, List<String> list)
+  @Override
+  public void onPermissionsGranted(int requestCode, List<String> list)
   {
     // Do nothing.
   }
@@ -267,7 +247,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
    * @param list
    *     The requested permission list. Never null.
    */
-  @Override public void onPermissionsDenied(int requestCode, List<String> list)
+  @Override
+  public void onPermissionsDenied(int requestCode, List<String> list)
   {
     // Do nothing.
   }
@@ -320,7 +301,7 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
    *     code describing the presence (or lack of)
    *     Google Play Services on this device.
    */
-  void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode)
+  private void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode)
   {
     GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
     Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode, REQUEST_GOOGLE_PLAY_SERVICES);
@@ -349,7 +330,8 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
      * @param params
      *     no parameters needed for this task.
      */
-    @Override protected List<String> doInBackground(Void... params)
+    @Override
+    protected List<String> doInBackground(Void... params)
     {
       try
       {
@@ -366,10 +348,6 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
     /**
      * Fetch a list of names and majors of students in a sample spreadsheet:
      * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-     *
-     * @return List of names and majors
-     *
-     * @throws IOException
      */
     private List<String> getDataFromApi() throws IOException
     {
@@ -410,7 +388,9 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
       }
     }
     
-    @Override protected void onCancelled()
+    @SuppressLint ("SetTextI18n")
+    @Override
+    protected void onCancelled()
     {
       mProgress.hide();
       if (mLastError != null)
@@ -425,12 +405,12 @@ public class MainActivity extends Activity implements EasyPermissions.Permission
         }
         else
         {
-          mOutputText.setText("The following error occurred:\n" + mLastError.getMessage());
+          mOutputText.setText(getString(R.string.ErrorOccurred) + mLastError.getMessage());
         }
       }
       else
       {
-        mOutputText.setText("Request cancelled.");
+        mOutputText.setText(R.string.RequestCancelled);
       }
     }
   }

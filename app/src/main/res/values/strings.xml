@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Spreadsheets</string>
+    <string name="RequestCancelled">Request cancelled.</string>
+    <string name="ErrorOccurred">The following error occurred:</string>
+    <string name="calling_spreadsheets">Calling Spreadsheets &#8230;</string>
+    <string name="call_spreadsheets">Call Spreadsheets</string>
+    <string name="click_the_button">Click the button to test the API</string>
 </resources>
