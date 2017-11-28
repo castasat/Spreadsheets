@@ -14,7 +14,6 @@ import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import android.Manifest;
 import android.accounts.AccountManager;
-import android.annotation.SuppressLint;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -24,26 +23,22 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import pub.devrel.easypermissions.EasyPermissions;
-import pub.devrel.easypermissions.AfterPermissionGranted;
-import pub.devrel.easypermissions.EasyPermissions.PermissionCallbacks;
 
-public class MainActivity extends AppCompatActivity implements PermissionCallbacks
+public class MainActivity extends AppCompatActivity
 {
   private GoogleAccountCredential mCredential;
+  
   private TextView                mOutputText;
   private Button                  mCallApiButton;
   private ProgressDialog          mProgress;
@@ -82,7 +77,8 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
     mProgress.setMessage(getString(R.string.calling_spreadsheets));
     
     // Initialize credentials and service object.
-    mCredential = GoogleAccountCredential.usingOAuth2(getApplicationContext(), Arrays.asList(SCOPES)).setBackOff(new ExponentialBackOff());
+    mCredential = GoogleAccountCredential.usingOAuth2(getApplicationContext(), Arrays.asList
+        (SCOPES)).setBackOff(new ExponentialBackOff());
   }
   
   
@@ -123,7 +119,7 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
    * function will be rerun automatically whenever the GET_ACCOUNTS permission
    * is granted.
    */
-  @AfterPermissionGranted (REQUEST_PERMISSION_GET_ACCOUNTS)
+  //@AfterPermissionGranted (REQUEST_PERMISSION_GET_ACCOUNTS)
   private void chooseAccount()
   {
     if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS))
@@ -143,7 +139,8 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
     else
     {
       // Request the GET_ACCOUNTS permission via a user dialog
-      EasyPermissions.requestPermissions(this, "This app needs to access your Google account (via Contacts).",
+      EasyPermissions.requestPermissions(this, "This app needs to access your Google account "
+                                               + "(via Contacts).",
           REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
     }
   }
@@ -171,7 +168,8 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
       case REQUEST_GOOGLE_PLAY_SERVICES:
         if (resultCode != RESULT_OK)
         {
-          mOutputText.setText("This app requires Google Play Services. Please install " + "Google Play Services on your device and relaunch this app.");
+          mOutputText.setText("This app requires Google Play Services. Please install " +
+                              "Google Play Services on your device and relaunch this app.");
         }
         else
         {
@@ -215,44 +213,12 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
    *     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
    */
   @Override
-  public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults)
+  public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults)
   {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
   }
-  
-  /**
-   * Callback for when a permission is granted using the EasyPermissions
-   * library.
-   *
-   * @param requestCode
-   *     The request code associated with the requested
-   *     permission
-   * @param list
-   *     The requested permission list. Never null.
-   */
-  @Override
-  public void onPermissionsGranted(int requestCode, List<String> list)
-  {
-    // Do nothing.
-  }
-  
-  /**
-   * Callback for when a permission is denied using the EasyPermissions
-   * library.
-   *
-   * @param requestCode
-   *     The request code associated with the requested
-   *     permission
-   * @param list
-   *     The requested permission list. Never null.
-   */
-  @Override
-  public void onPermissionsDenied(int requestCode, List<String> list)
-  {
-    // Do nothing.
-  }
-  
+
   /**
    * Checks whether the device currently has a network connection.
    *
@@ -304,7 +270,8 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
   private void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode)
   {
     GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-    Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode, REQUEST_GOOGLE_PLAY_SERVICES);
+    Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode,
+        REQUEST_GOOGLE_PLAY_SERVICES);
     dialog.show();
   }
   
@@ -321,7 +288,8 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
     {
       HttpTransport transport   = AndroidHttp.newCompatibleTransport();
       JsonFactory   jsonFactory = JacksonFactory.getDefaultInstance();
-      mService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory, credential).setApplicationName("Google Sheets API Android Quickstart").build();
+      mService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory,
+          credential).setApplicationName("Spreadsheets").build();
     }
     
     /**
@@ -352,16 +320,17 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
     private List<String> getDataFromApi() throws IOException
     {
       String             spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
-      String             range         = "Class Data!A2:E";
+      String             range         = "Class Data!A2:F";
       List<String>       results       = new ArrayList<String>();
-      ValueRange         response      = this.mService.spreadsheets().values().get(spreadsheetId, range).execute();
+      ValueRange         response      = this.mService.spreadsheets().values().get(spreadsheetId,
+                                         range).execute();
       List<List<Object>> values        = response.getValues();
       if (values != null)
       {
-        results.add("Name, Major");
+        results.add("Name, Gender, Activity");
         for (List row : values)
         {
-          results.add(row.get(0) + ", " + row.get(4));
+          results.add(row.get(0) + ", " + row.get(1) + ", " + row.get(5));
         }
       }
       return results;
@@ -388,8 +357,6 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
       }
     }
     
-    @SuppressLint ("SetTextI18n")
-    @Override
     protected void onCancelled()
     {
       mProgress.hide();
@@ -397,11 +364,13 @@ public class MainActivity extends AppCompatActivity implements PermissionCallbac
       {
         if (mLastError instanceof GooglePlayServicesAvailabilityIOException)
         {
-          showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) mLastError).getConnectionStatusCode());
+          showGooglePlayServicesAvailabilityErrorDialog((
+              (GooglePlayServicesAvailabilityIOException) mLastError).getConnectionStatusCode());
         }
         else if (mLastError instanceof UserRecoverableAuthIOException)
         {
-          startActivityForResult(((UserRecoverableAuthIOException) mLastError).getIntent(), MainActivity.REQUEST_AUTHORIZATION);
+          startActivityForResult(((UserRecoverableAuthIOException) mLastError).getIntent(),
+              MainActivity.REQUEST_AUTHORIZATION);
         }
         else
         {
