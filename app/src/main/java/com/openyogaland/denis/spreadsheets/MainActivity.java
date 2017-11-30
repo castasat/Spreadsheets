@@ -3,14 +3,11 @@ package com.openyogaland.denis.spreadsheets;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.extensions.android.http.AndroidHttp;
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.ExponentialBackOff;
-import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import android.Manifest;
 import android.accounts.AccountManager;
@@ -31,25 +28,25 @@ import android.widget.Button;
 import android.widget.TextView;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import pub.devrel.easypermissions.EasyPermissions;
 
+// class MainActivity represents UI work logic and user interactions
 public class MainActivity extends AppCompatActivity
 {
-  private GoogleAccountCredential mCredential;
+  GoogleServicesHelper    googleServicesHelper;
   
-  private TextView                mOutputText;
-  private Button                  mCallApiButton;
-  private ProgressDialog          mProgress;
+  ProgressDialog          mProgress;
   
-  private static final int REQUEST_ACCOUNT_PICKER          = 1000;
-  private static final int REQUEST_AUTHORIZATION           = 1001;
-  private static final int REQUEST_GOOGLE_PLAY_SERVICES    = 1002;
-  private static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
+  TextView                mOutputText;
+  Button                  mCallApiButton;
   
-  private static final String   PREF_ACCOUNT_NAME = "accountName";
-  private static final String[] SCOPES            = {SheetsScopes.SPREADSHEETS_READONLY};
+  static final int REQUEST_ACCOUNT_PICKER          = 1000;
+  static final int REQUEST_AUTHORIZATION           = 1001;
+  static final int REQUEST_GOOGLE_PLAY_SERVICES    = 1002;
+  static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
+  
+  static final String   PREF_ACCOUNT_NAME = "accountName";
   
   @Override
   public void onCreate(Bundle savedInstanceState)
@@ -75,10 +72,10 @@ public class MainActivity extends AppCompatActivity
     
     mProgress = new ProgressDialog(this);
     mProgress.setMessage(getString(R.string.calling_spreadsheets));
-    
-    // Initialize credentials and service object.
-    mCredential = GoogleAccountCredential.usingOAuth2(getApplicationContext(), Arrays.asList
-        (SCOPES)).setBackOff(new ExponentialBackOff());
+  
+    // Initialize GoogleServicesHelper
+    // TODO: add choosing scopes functionality
+    googleServicesHelper = new GoogleServicesHelper(getApplicationContext());
   }
   
   
@@ -89,13 +86,13 @@ public class MainActivity extends AppCompatActivity
    * of the preconditions are not satisfied, the app will prompt the user as
    * appropriate.
    */
-  private void getResultsFromApi()
+  void getResultsFromApi()
   {
     if (!isGooglePlayServicesAvailable())
     {
       acquireGooglePlayServices();
     }
-    else if (mCredential.getSelectedAccountName() == null)
+    else if (googleServicesHelper.googleAccountCredential.getSelectedAccountName() == null)
     {
       chooseAccount();
     }
@@ -105,7 +102,8 @@ public class MainActivity extends AppCompatActivity
     }
     else
     {
-      new MakeRequestTask(mCredential).execute();
+      new MakeRequestTask(googleServicesHelper.googleAccountCredential, mOutputText, mProgress)
+          .execute();
     }
   }
   
@@ -119,21 +117,21 @@ public class MainActivity extends AppCompatActivity
    * function will be rerun automatically whenever the GET_ACCOUNTS permission
    * is granted.
    */
-  //@AfterPermissionGranted (REQUEST_PERMISSION_GET_ACCOUNTS)
-  private void chooseAccount()
+  void chooseAccount()
   {
     if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS))
     {
       String accountName = getPreferences(Context.MODE_PRIVATE).getString(PREF_ACCOUNT_NAME, null);
       if (accountName != null)
       {
-        mCredential.setSelectedAccountName(accountName);
+        googleServicesHelper.googleAccountCredential.setSelectedAccountName(accountName);
         getResultsFromApi();
       }
       else
       {
         // Start a dialog from which the user can choose an account
-        startActivityForResult(mCredential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
+        startActivityForResult(googleServicesHelper.googleAccountCredential.newChooseAccountIntent(),
+            REQUEST_ACCOUNT_PICKER);
       }
     }
     else
@@ -186,7 +184,7 @@ public class MainActivity extends AppCompatActivity
             SharedPreferences.Editor editor = settings.edit();
             editor.putString(PREF_ACCOUNT_NAME, accountName);
             editor.apply();
-            mCredential.setSelectedAccountName(accountName);
+            googleServicesHelper.googleAccountCredential.setSelectedAccountName(accountName);
             getResultsFromApi();
           }
         }
@@ -224,7 +222,7 @@ public class MainActivity extends AppCompatActivity
    *
    * @return true if the device has a network connection, false otherwise.
    */
-  private boolean isDeviceOnline()
+  boolean isDeviceOnline()
   {
     ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
     NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
@@ -237,7 +235,7 @@ public class MainActivity extends AppCompatActivity
    * @return true if Google Play Services is available and up to
    * date on this device; false otherwise.
    */
-  private boolean isGooglePlayServicesAvailable()
+  boolean isGooglePlayServicesAvailable()
   {
     GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
     final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
@@ -248,7 +246,7 @@ public class MainActivity extends AppCompatActivity
    * Attempt to resolve a missing, out-of-date, invalid or disabled Google
    * Play Services installation via a user dialog, if possible.
    */
-  private void acquireGooglePlayServices()
+  void acquireGooglePlayServices()
   {
     GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
     final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
@@ -267,120 +265,11 @@ public class MainActivity extends AppCompatActivity
    *     code describing the presence (or lack of)
    *     Google Play Services on this device.
    */
-  private void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode)
+  void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode)
   {
     GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
     Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode,
         REQUEST_GOOGLE_PLAY_SERVICES);
     dialog.show();
-  }
-  
-  /**
-   * An asynchronous task that handles the Google Sheets API call.
-   * Placing the API calls in their own task ensures the UI stays responsive.
-   */
-  private class MakeRequestTask extends AsyncTask<Void, Void, List<String>>
-  {
-    private com.google.api.services.sheets.v4.Sheets mService   = null;
-    private Exception                                mLastError = null;
-    
-    MakeRequestTask(GoogleAccountCredential credential)
-    {
-      HttpTransport transport   = AndroidHttp.newCompatibleTransport();
-      JsonFactory   jsonFactory = JacksonFactory.getDefaultInstance();
-      mService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory,
-          credential).setApplicationName("Spreadsheets").build();
-    }
-    
-    /**
-     * Background task to call Google Sheets API.
-     *
-     * @param params
-     *     no parameters needed for this task.
-     */
-    @Override
-    protected List<String> doInBackground(Void... params)
-    {
-      try
-      {
-        return getDataFromApi();
-      }
-      catch (Exception e)
-      {
-        mLastError = e;
-        cancel(true);
-        return null;
-      }
-    }
-    
-    /**
-     * Fetch a list of names and majors of students in a sample spreadsheet:
-     * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-     */
-    private List<String> getDataFromApi() throws IOException
-    {
-      String             spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
-      String             range         = "Class Data!A2:F";
-      List<String>       results       = new ArrayList<String>();
-      ValueRange         response      = this.mService.spreadsheets().values().get(spreadsheetId,
-                                         range).execute();
-      List<List<Object>> values        = response.getValues();
-      if (values != null)
-      {
-        results.add("Name, Gender, Activity");
-        for (List row : values)
-        {
-          results.add(row.get(0) + ", " + row.get(1) + ", " + row.get(5));
-        }
-      }
-      return results;
-    }
-  
-  
-    @Override protected void onPreExecute()
-    {
-      mOutputText.setText("");
-      mProgress.show();
-    }
-    
-    @Override protected void onPostExecute(List<String> output)
-    {
-      mProgress.hide();
-      if (output == null || output.size() == 0)
-      {
-        mOutputText.setText("No results returned.");
-      }
-      else
-      {
-        output.add(0, "Data retrieved using the Google Sheets API:");
-        mOutputText.setText(TextUtils.join("\n", output));
-      }
-    }
-    
-    protected void onCancelled()
-    {
-      mProgress.hide();
-      if (mLastError != null)
-      {
-        if (mLastError instanceof GooglePlayServicesAvailabilityIOException)
-        {
-          showGooglePlayServicesAvailabilityErrorDialog((
-              (GooglePlayServicesAvailabilityIOException) mLastError).getConnectionStatusCode());
-        }
-        else if (mLastError instanceof UserRecoverableAuthIOException)
-        {
-          startActivityForResult(((UserRecoverableAuthIOException) mLastError).getIntent(),
-              MainActivity.REQUEST_AUTHORIZATION);
-        }
-        else
-        {
-          mOutputText.setText(getString(R.string.ErrorOccurred) + mLastError.getMessage());
-        }
-      }
-      else
-      {
-        mOutputText.setText(R.string.RequestCancelled);
-      }
-    }
   }
 }
