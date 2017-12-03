@@ -1,35 +1,15 @@
 package com.openyogaland.denis.spreadsheets;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
-import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.ExponentialBackOff;
-import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.ValueRange;
-
-import android.Manifest;
-import android.accounts.AccountManager;
-import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.AsyncTask;
-import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
-import android.text.method.ScrollingMovementMethod;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -125,7 +105,7 @@ import java.util.List;
       }
     }
     
-    // TODO uncomment method onCancelled()
+    // TODO uncomment method onCancelled() and move some part to MainActivity UI class
     /**@Override
     protected void onCancelled()
     {

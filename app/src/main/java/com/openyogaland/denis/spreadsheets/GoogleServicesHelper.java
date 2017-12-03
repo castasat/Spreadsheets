@@ -9,25 +9,42 @@ import com.google.api.services.sheets.v4.SheetsScopes;
 
 // Java libraries
 import java.util.Arrays;
+import java.util.List;
 
 // Class GoogleServicesHelper incapsulates all interactions with GoogleServices
 class GoogleServicesHelper
 {
-  // TODO move the scopes to XML as integers to use switch() and also use bitflags to combine scopes
-  static final String[] SCOPES = {SheetsScopes.SPREADSHEETS_READONLY};
+  // TODO switch scopes and combine them using bitflags
+  private static final String[] SCOPES = {SheetsScopes.SPREADSHEETS_READONLY};
   
   GoogleAccountCredential googleAccountCredential;
   
-  // If constructor is called with explicit String[] stringScopes parameter
-  public GoogleServicesHelper(Context context, String[] stringScopes)
+  // Constructor called with explicit stringScopes[] parameter
+  GoogleServicesHelper(Context context, String[] stringScopes)
   {
-    // TODO: check the SheetsScopes argument
-    googleAccountCredential = GoogleAccountCredential.usingOAuth2(context, Arrays.asList(stringScopes));
+    // represent String[] array as List<String>
+    List<String> scope        = Arrays.asList(stringScopes),
+                 defaultScope = Arrays.asList(SCOPES);
+
+    // checking if stringScopes[] contains constants from SheetsScopes
+    if (scope.contains(SheetsScopes.DRIVE) ||
+        scope.contains(SheetsScopes.DRIVE_FILE) ||
+        scope.contains(SheetsScopes.DRIVE_READONLY) ||
+        scope.contains(SheetsScopes.SPREADSHEETS) ||
+        scope.contains(SheetsScopes.SPREADSHEETS_READONLY))
+    {
+      googleAccountCredential = GoogleAccountCredential.usingOAuth2(context, scope);
+    }
+    else // use default scope SheetsScopes.SPREADSHEETS_READONLY
+    {
+      googleAccountCredential = GoogleAccountCredential.usingOAuth2(context, defaultScope);
+    }
+    
     googleAccountCredential.setBackOff(new ExponentialBackOff());
   }
   
-  // if constructor is called without String[] stringScopes parameters - using default
-  public GoogleServicesHelper(Context context)
+  // Constructor called without using default stringScopes[]
+  GoogleServicesHelper(Context context)
   {
     this(context, SCOPES);
   }
