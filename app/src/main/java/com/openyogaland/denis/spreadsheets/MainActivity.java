@@ -15,12 +15,13 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
 import pub.devrel.easypermissions.EasyPermissions;
 
 // class MainActivity represents UI work logic and user interactions
-public class MainActivity extends AppCompatActivity
+public class MainActivity extends AppCompatActivity implements OnClickListener
 {
   // Constants
   // TODO move constants to XML
@@ -46,17 +47,7 @@ public class MainActivity extends AppCompatActivity
     setContentView(R.layout.main_layout);
 
     mCallApiButton = findViewById(R.id.mCallApiButton);
-    mCallApiButton.setOnClickListener(new View.OnClickListener()
-    {
-      @Override
-      public void onClick(View v)
-      {
-        mCallApiButton.setEnabled(false);
-        mOutputText.setText("");
-        getResultsFromApi();
-        mCallApiButton.setEnabled(true);
-      }
-    });
+    mCallApiButton.setOnClickListener(this);
     
     mOutputText = findViewById(R.id.mOutputText);
     mOutputText.setMovementMethod(new ScrollingMovementMethod());
@@ -64,9 +55,25 @@ public class MainActivity extends AppCompatActivity
     mProgress = new ProgressDialog(this);
     mProgress.setMessage(getString(R.string.calling_spreadsheets));
   
-    // Initialize GoogleServicesHelper
     // TODO: add choosing scopes on UI functionality as int values from XML
-    googleServicesHelper = new GoogleServicesHelper(getApplicationContext());
+    // Initialize GoogleServicesHelper
+     googleServicesHelper = new GoogleServicesHelper(getApplicationContext());
+  }
+  
+  // implementing method onClick(View) from OnClickListener interface
+  public void onClick(View view)
+  {
+    // Chtcking view id
+    switch (view.getId())
+    {
+      // in case of mCallApiButton
+      case R.id.mCallApiButton:
+        mCallApiButton.setEnabled(false);
+        mOutputText.setText("");
+        getResultsFromApi();
+        mCallApiButton.setEnabled(true);
+        break;
+    }
   }
   
   // TODO move this to GoogleServicesHelper class
