@@ -1,8 +1,5 @@
 package com.openyogaland.denis.spreadsheets;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
-import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -18,28 +15,29 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.TextView;
-import pub.devrel.easypermissions.EasyPermissions;
+
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 
 // class MainActivity represents UI work logic and user interactions
 public class MainActivity extends AppCompatActivity implements OnClickListener
 {
   // Constants
-  // TODO move constants to XML
-  static final int    REQUEST_ACCOUNT_PICKER          = 1000;
-  static final int    REQUEST_AUTHORIZATION           = 1001;
-  static final int    REQUEST_GOOGLE_PLAY_SERVICES    = 1002;
-  static final int    REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
-  static final String PREF_ACCOUNT_NAME = "accountName";
-
-  // GoogleServicesHelper calss incapsulates all interactions with GoogleServices
-  GoogleServicesHelper    googleServicesHelper;
+  private static final int REQUEST_ACCOUNT_PICKER          = 1000;
+  private static final int REQUEST_AUTHORIZATION           = 1001;
+  private static final int REQUEST_GOOGLE_PLAY_SERVICES    = 1002;
+  private static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
+  private static final String PREF_ACCOUNT_NAME            = "accountName";
+  
+  // GoogleServicesHelper class incapsulates interactions with GoogleServices
+  GoogleServicesHelper    googleServicesHelper  = null;
   
   // User Interface fields
-  ProgressDialog          mProgress;
-  TextView                mOutputText;
-  Button                  mCallApiButton;
+  ProgressDialog          mProgress             = null;
+  TextView                mOutputText           = null;
+  Button                  mCallApiButton        = null;
   
-  // first method to call then Activity is created
+  // First method to call then Activity is created
   @Override
   public void onCreate(Bundle savedInstanceState)
   {
@@ -55,12 +53,11 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
     mProgress = new ProgressDialog(this);
     mProgress.setMessage(getString(R.string.calling_spreadsheets));
   
-    // TODO: add choosing scopes on UI functionality as int values from XML
     // Initialize GoogleServicesHelper
      googleServicesHelper = new GoogleServicesHelper(getApplicationContext());
   }
   
-  // implementing method onClick(View) from OnClickListener interface
+  // Implementing method onClick(View) from OnClickListener interface
   public void onClick(View view)
   {
     // Chtcking view id
@@ -76,25 +73,21 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
     }
   }
   
-  // TODO move this to GoogleServicesHelper class
-  /**
-   * Attempt to call the API, after verifying that all the preconditions are
-   * satisfied. The preconditions are: Google Play Services installed, an
-   * account was selected and the device currently has online access. If any
-   * of the preconditions are not satisfied, the app will prompt the user as
-   * appropriate.
-   */
+  // Verify that Google Play Services are installed, an account was selected and the device
+  // currently has online access. Else the app will prompt the user.
+  // After that attempt to call the API
+  // TODO check if Google Play Services are available
   void getResultsFromApi()
   {
-    if (!isGooglePlayServicesAvailable())
+    if(!isGooglePlayServicesAvailable())
     {
       acquireGooglePlayServices();
     }
-    else if (googleServicesHelper.googleAccountCredential.getSelectedAccountName() == null)
+    else if(googleServicesHelper.googleAccountCredential.getSelectedAccountName() == null)
     {
       chooseAccount();
     }
-    else if (!isDeviceOnline())
+    else if(!isDeviceOnline())
     {
       mOutputText.setText("No network connection available.");
     }
@@ -105,40 +98,66 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
     }
   }
   
-  // TODO move this to GoogleServicesHelper class
+  // Check that Google Play services APK is installed and up to date.
+  // Return true if Google Play Services is available and up to date on this device
+  private boolean isGooglePlayServicesAvailable()
+  {
+    GoogleApiAvailability apiAvailability      = GoogleApiAvailability.getInstance();
+    final int             connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
+    return connectionStatusCode == ConnectionResult.SUCCESS;
+  }
+  
+  // Attempt to resolve a missing, out-of-date, invalid or disabled Google Play Services
+  // installation via a user dialog
+  private void acquireGooglePlayServices()
+  {
+    GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+    final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
+    if(apiAvailability.isUserResolvableError(connectionStatusCode))
+    {
+      showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
+    }
+  }
+  
+  // TODO remove method if never used
+   /* Respond to requests for permissions at runtime for API 23 and above.
+   *
+   * @param requestCode
+   *     The request code passed in
+   *     requestPermissions(android.app.Activity, String, int, String[])
+   * @param permissions
+   *     The requested permissions. Never null.
+   * @param grantResults
+   *     The grant results for the corresponding permissions
+   *     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
+   */
+  @Override
+  public void onRequestPermissionsResult(int requestCode, String[] permissions, int[]
+      grantResults)
+  {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+  }
+  
   /**
    * Attempts to set the account used with the API credentials. If an account
    * name was previously saved it will use that one; otherwise an account
    * picker dialog will be shown to the user. Note that the setting the
    * account to use with the credentials object requires the app to have the
-   * GET_ACCOUNTS permission, which is requested here if it is not already
-   * present. The AfterPermissionGranted annotation indicates that this
-   * function will be rerun automatically whenever the GET_ACCOUNTS permission
-   * is granted.
+   * GET_ACCOUNTS permission
    */
-  void chooseAccount()
+  private void chooseAccount()
   {
-    if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS))
+    String accountName = getPreferences(Context.MODE_PRIVATE).getString(PREF_ACCOUNT_NAME, null);
+    if(accountName != null)
     {
-      String accountName = getPreferences(Context.MODE_PRIVATE).getString(PREF_ACCOUNT_NAME, null);
-      if (accountName != null)
-      {
-        googleServicesHelper.googleAccountCredential.setSelectedAccountName(accountName);
-        getResultsFromApi();
-      }
-      else
-      {
-        // Start a dialog from which the user can choose an account
-        startActivityForResult(googleServicesHelper.googleAccountCredential.newChooseAccountIntent(),
-            REQUEST_ACCOUNT_PICKER);
-      }
+      googleServicesHelper.googleAccountCredential.setSelectedAccountName(accountName);
+      getResultsFromApi();
     }
     else
     {
-      // Request the GET_ACCOUNTS permission via a user dialog
-      EasyPermissions.requestPermissions(this, "This app needs to access your Google account "
-                                               + "(via Contacts).",
-          REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
+      // Start a dialog from which the user can choose an account
+      startActivityForResult(googleServicesHelper.googleAccountCredential.newChooseAccountIntent(),
+          REQUEST_ACCOUNT_PICKER);
     }
   }
   
@@ -157,16 +176,15 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
    *     activity result.
    */
   @Override
-  protected void onActivityResult(int requestCode, int resultCode, Intent data)
+  public void onActivityResult(int requestCode, int resultCode, Intent data)
   {
     super.onActivityResult(requestCode, resultCode, data);
-    switch (requestCode)
+    switch(requestCode)
     {
       case REQUEST_GOOGLE_PLAY_SERVICES:
-        if (resultCode != RESULT_OK)
+        if(resultCode != RESULT_OK)
         {
-          mOutputText.setText("This app requires Google Play Services. Please install " +
-                              "Google Play Services on your device and relaunch this app.");
+          mOutputText.setText("This app requires Google Play Services. Please install Google Play Services on your device and relaunch this app.");
         }
         else
         {
@@ -174,13 +192,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
         }
         break;
       case REQUEST_ACCOUNT_PICKER:
-        if (resultCode == RESULT_OK && data != null && data.getExtras() != null)
+        if(resultCode == RESULT_OK && data != null && data.getExtras() != null)
         {
           String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-          if (accountName != null)
+          if(accountName != null)
           {
-            SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = settings.edit();
+            SharedPreferences        settings = getPreferences(Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor   = settings.edit();
             editor.putString(PREF_ACCOUNT_NAME, accountName);
             editor.apply();
             googleServicesHelper.googleAccountCredential.setSelectedAccountName(accountName);
@@ -189,7 +207,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
         }
         break;
       case REQUEST_AUTHORIZATION:
-        if (resultCode == RESULT_OK)
+        if(resultCode == RESULT_OK)
         {
           getResultsFromApi();
         }
@@ -198,67 +216,17 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
   }
   
   /**
-   * Respond to requests for permissions at runtime for API 23 and above.
-   *
-   * @param requestCode
-   *     The request code passed in
-   *     requestPermissions(android.app.Activity, String, int, String[])
-   * @param permissions
-   *     The requested permissions. Never null.
-   * @param grantResults
-   *     The grant results for the corresponding permissions
-   *     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
-   */
-  @Override
-  public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults)
-  {
-    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
-  }
-  
-  // TODO move this to GoogleServicesHelper
-  /**
    * Checks whether the device currently has a network connection.
    *
    * @return true if the device has a network connection, false otherwise.
    */
-  boolean isDeviceOnline()
+  private boolean isDeviceOnline()
   {
-    ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-    NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+    ConnectivityManager connMgr     = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+    NetworkInfo         networkInfo = connMgr.getActiveNetworkInfo();
     return (networkInfo != null && networkInfo.isConnected());
   }
   
-  // TODO move this to GoogleServicesHelper
-  /**
-   * Check that Google Play services APK is installed and up to date.
-   *
-   * @return true if Google Play Services is available and up to
-   * date on this device; false otherwise.
-   */
-  boolean isGooglePlayServicesAvailable()
-  {
-    GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-    final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
-    return connectionStatusCode == ConnectionResult.SUCCESS;
-  }
-  
-  // TODO move this to GoogleServicesHelper
-  /**
-   * Attempt to resolve a missing, out-of-date, invalid or disabled Google
-   * Play Services installation via a user dialog, if possible.
-   */
-  void acquireGooglePlayServices()
-  {
-    GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-    final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
-    if (apiAvailability.isUserResolvableError(connectionStatusCode))
-    {
-      showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
-    }
-  }
-  
-  // TODO split ot and move some part to GoogleServicesHelper and some will show dialog here
   /**
    * Display an error dialog showing that Google Play Services is missing
    * or out of date.
@@ -267,7 +235,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener
    *     code describing the presence (or lack of)
    *     Google Play Services on this device.
    */
-  void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode)
+  private void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode)
   {
     GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
     Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode,

@@ -1,16 +1,17 @@
 package com.openyogaland.denis.spreadsheets;
 
-import com.google.api.services.sheets.v4.Sheets;
+import android.app.ProgressDialog;
+import android.os.AsyncTask;
+import android.text.TextUtils;
+import android.widget.TextView;
+
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.ValueRange;
-import android.app.ProgressDialog;
-import android.os.AsyncTask;
-import android.text.TextUtils;
-import android.widget.TextView;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -23,11 +24,13 @@ import java.util.List;
 // TODO remove UI interactions and use GoogleServicesHelper
   public class MakeRequestTask extends AsyncTask<Void, Void, List<String>>
   {
+    // Variables
     Sheets         mService    = null;
     Exception      mLastError  = null;
     TextView       mOutputText = null;
     ProgressDialog mProgress   = null;
     
+    // Constructor
     MakeRequestTask(GoogleAccountCredential credential, TextView mOutputText, ProgressDialog
         mProgress)
     {
@@ -106,7 +109,8 @@ import java.util.List;
     }
     
     // TODO uncomment method onCancelled() and move some part to MainActivity UI class
-    /**@Override
+    /**
+    @Override
     protected void onCancelled()
     {
       mProgress.hide();
@@ -130,5 +134,6 @@ import java.util.List;
       {
         mOutputText.setText(R.string.RequestCancelled);
       }
-    } **/
+    }
+    **/
   }

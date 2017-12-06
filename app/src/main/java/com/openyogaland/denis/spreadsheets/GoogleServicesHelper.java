@@ -14,13 +14,13 @@ import java.util.List;
 // Class GoogleServicesHelper incapsulates all interactions with GoogleServices
 class GoogleServicesHelper
 {
-  // TODO switch scopes and combine them using bitflags
+  // Constants
   private static final String[] SCOPES = {SheetsScopes.SPREADSHEETS_READONLY};
-  
-  GoogleAccountCredential googleAccountCredential;
+  // Variables
+  GoogleAccountCredential googleAccountCredential = null;
   
   // Constructor called with explicit stringScopes[] parameter
-  GoogleServicesHelper(Context context, String[] stringScopes)
+  private GoogleServicesHelper(Context context, String[] stringScopes)
   {
     // represent String[] array as List<String>
     List<String> scope        = Arrays.asList(stringScopes),
